@@ -1,0 +1,66 @@
+#include <SI_EFM8BB1_Register_Enums.h>
+void InitDevice(void) {
+ //Disable Watchdog Timer
+ //Disable Watchdog with key sequence
+ WDTCN = 0xDE; //First key
+ WDTCN = 0xAD; //Second key
+ // [WDTCN – Watchdog Timer Control]$
+ //Setup Defaults for P1
+ P1MDOUT = P1MDOUT_B0__PUSH_PULL | P1MDOUT_B1__OPEN_DRAIN |
+ P1MDOUT_B2__OPEN_DRAIN | P1MDOUT_B3__OPEN_DRAIN |
+ P1MDOUT_B4__PUSH_PULL | P1MDOUT_B5__OPEN_DRAIN |
+ P1MDOUT_B6__OPEN_DRAIN | P1MDOUT_B7__OPEN_DRAIN;
+ //Enable Weak Pullups
+ XBR2 = XBR2_WEAKPUD__PULL_UPS_ENABLED | XBR2_XBARE__ENABLED;
+ //Disable Interrupts
+ IE = IE_EA__DISABLED | IE_EX0__DISABLED | IE_EX1__DISABLED |
+ IE_ESPI0__DISABLED | IE_ET0__DISABLED | IE_ET1__DISABLED |
+ IE_ET2__ENABLED | IE_ES0__DISABLED;
+}
+sbit SW1 = P0 ^ 0;
+sbit SW2 = P0 ^ 1;
+unsigned char count = 50;
+void clockwise(void) // allows push button to rotate clockwise
+{
+ if (!(SW2 & 0x01)) {
+ if (count <= 95) // 45 degrees
+ {
+ count = count + 5;
+ }
+ while (!(SW2 & 0x01)) {}
+ }
+}
+void counterclockwise(void) // allows push button to rotate counter clockwise
+{
+ if (!(SW1 & 0x01)) {
+ if (count >= 5) // -45 degrees
+ {
+ count = count - 5;
+ }
+ while (!(SW1 & 0x01)) {}
+ }
+}
+void T0_ISR(void) interrupt 1 {
+ unsigned char x;
+ P1 = 0xFF; //all Ports of 1 high active. 
+ TCON &= ~(0x01 << 4); //special function registier
+ TH0 = 0xEC; //1110 1100
+ TL0 = 0x10; //0001 0000
+ TCON |= (0x01 << 4);
+ for (x = 0; x <= 100; x++) {} //busy wait delays
+ for (x = 0; x <= count; x++) {}
+ P1 = 0x00;
+}
+void main(void) {
+ InitDevice();
+ P0 = 0xFF;
+ IE = 0x82; // global interrupt
+ TMOD = 0x01;
+ TH0 = 0xEC; //1110 1100
+ TL0 = 0x10; //0001 0000
+ TCON |= (0x01 << 4); // 0001 << 0010 << 0100 << 1000
+ while (1) {
+ clockwise();
+ counterclockwise();
+ }
+}

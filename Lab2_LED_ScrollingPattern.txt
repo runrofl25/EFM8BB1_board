@@ -1,0 +1,61 @@
+//main.c
+#include <SI_EFM8BB1_Register_Enums.h>
+ //#include <reg51.h>
+sbit D0 = P0 ^ 2;
+void InitDevice(void) {
+ //Disable Watchdog Timer
+ //Disable Watchdog with key sequence
+ WDTCN = 0xDE; //First key
+ WDTCN = 0xAD; //Second key
+ // [WDTCN – Watchdog Timer Control]$
+ //Setup Defaults for P1
+ P1MDOUT = P1MDOUT_B0__OPEN_DRAIN | P1MDOUT_B1__OPEN_DRAIN |
+ P1MDOUT_B2__OPEN_DRAIN | P1MDOUT_B3__OPEN_DRAIN |
+ P1MDOUT_B4__PUSH_PULL | P1MDOUT_B5__OPEN_DRAIN |
+ P1MDOUT_B6__OPEN_DRAIN | P1MDOUT_B7__OPEN_DRAIN;
+ //Enable Weak Pullups
+ XBR2 = XBR2_WEAKPUD__PULL_UPS_ENABLED | XBR2_XBARE__ENABLED;
+ //Disable Interrupts
+ IE = IE_EA__DISABLED | IE_EX0__DISABLED | IE_EX1__DISABLED |
+ IE_ESPI0__DISABLED | IE_ET0__DISABLED | IE_ET1__DISABLED |
+ IE_ET2__ENABLED | IE_ES0__DISABLED;
+}
+void delay(int value) {
+ int i, j;
+ for (i = 0; i <= value; i++)
+ for (j = 0; j <= 5; j++);
+}
+main(void) {
+ unsigned char x, y;
+ //P0 = 0xFF;
+ //P1 = 0x00;
+ InitDevice();
+ //TMOD=0x01; // timer 0, mode 1(16-bit)
+ //IE = 0x81; // enables interrupt
+ //P0 = 0xFF; // enables pin 0
+ while (1) {
+ unsigned char tempVar;
+ tempVar = 0x80;
+ for (x = 0; x < 7; x++) {
+ if (D0) { //switch was enabled with sbit D0 = P0^2 then using D0 for place holder for P0
+ delay(30000); //on by default 1 second about
+ }
+ if (~D0) { //if button pressed then it will move 0.5 seconds ~~~aproximately~~
+ delay(15000);
+ }
+ tempVar = tempVar >> 1;
+ P1 = ~(tempVar); //tempVar is used to allow tempraroy storage for value then negation for
+P1 pins
+ }
+ for (y = 0; y < 0x7; y++) {
+ if (D0) { //switch was enabled with sbit D0 = P0^2 then using D0 for place holder for P0
+ delay(30000); //on by default 1 second about
+ }
+ if (~D0) { //if button pressed then it will move 0.5 seconds ~~~aproximately~~
+ delay(15000);
+ }
+ tempVar = tempVar <<= 1;
+ P1 = ~(tempVar);
+ }
+ }
+}
